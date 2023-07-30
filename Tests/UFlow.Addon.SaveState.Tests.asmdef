@@ -1,0 +1,20 @@
+{
+    "name": "UFlow.Addon.SaveState.Tests",
+    "rootNamespace": "UFlow.Addon.SaveState.Tests",
+    "references": [
+        "GUID:594055dfb2e54304495e78bdaf53fcaf",
+        "GUID:e6f16101baa5d2b42ab0181648fe5d9c",
+        "GUID:f4b25e78f096ead41bab888a001e186b"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
