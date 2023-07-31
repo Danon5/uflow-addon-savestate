@@ -1,6 +1,6 @@
-﻿using Rewired.Utils.Attributes;
-using UFlow.Addon.ECS.Core.Runtime;
+﻿using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Core.Runtime;
+using UnityEngine.Scripting;
 
 namespace UFlow.Addon.SaveState.Core.Runtime {
     [Preserve]
