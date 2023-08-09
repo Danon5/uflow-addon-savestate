@@ -7,7 +7,7 @@ using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
 
 namespace UFlow.Addon.SaveState.Core.Runtime {
-    public static class SaveSerialization {
+    public static class SaveSerializerAPI {
         private static readonly Dictionary<Type, MethodInfo> s_entityComponentSerializeCache = new();
         private static readonly Dictionary<Type, MethodInfo> s_entityComponentDeserializeCache = new();
         private static readonly Dictionary<Type, MethodInfo> s_worldComponentSerializeCache = new();
@@ -18,8 +18,8 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
         private static readonly Queue<Type> s_componentRemoveQueue = new();
         private static Entity s_currentEntity;
 
-        static SaveSerialization() {
-            var type = typeof(SaveSerialization);
+        static SaveSerializerAPI() {
+            var type = typeof(SaveSerializerAPI);
             foreach (var registeredType in SaveTypeMap.GetRegisteredTypesEnumerable())
                 s_entityComponentSerializeCache.Add(registeredType, 
                     type.GetMethod(nameof(SerializeEntityComponent), BindingFlags.Static | BindingFlags.NonPublic)!
