@@ -13,9 +13,9 @@ namespace UFlow.Addon.SaveState.Tests {
                 someData2 = 2,
                 someData3 = 3
             };
-            SaveSerialization.SerializeComponent(buffer, ref test1);
+            SaveSerializerAPI.SerializeComponent(buffer, ref test1);
             buffer.ResetCursor();
-            var result = SaveSerialization.DeserializeComponent<Test1>(buffer);
+            var result = SaveSerializerAPI.DeserializeComponent<Test1>(buffer);
             Assert.That(result.someData1, Is.EqualTo(1));
             Assert.That(result.someData2, Is.EqualTo(0));
             Assert.That(result.someData3, Is.EqualTo(3));
@@ -31,10 +31,10 @@ namespace UFlow.Addon.SaveState.Tests {
                 someData2 = 2,
                 someData3 = 3
             });
-            SaveSerialization.SerializeEntityAsNew(buffer, entity);
+            SaveSerializerAPI.SerializeEntityAsNew(buffer, entity);
             buffer.ResetCursor();
             entity.Destroy();
-            var deserializedEntity = SaveSerialization.DeserializeEntityAsNew(buffer, world);
+            var deserializedEntity = SaveSerializerAPI.DeserializeEntityAsNew(buffer, world);
             ref var test1 = ref deserializedEntity.Get<Test1>();
             Assert.That(test1.someData1, Is.EqualTo(1));
             Assert.That(test1.someData2, Is.EqualTo(0));
@@ -55,10 +55,10 @@ namespace UFlow.Addon.SaveState.Tests {
                     3
                 }
             });
-            SaveSerialization.SerializeEntityAsNew(buffer, entity);
+            SaveSerializerAPI.SerializeEntityAsNew(buffer, entity);
             buffer.ResetCursor();
             entity.Destroy();
-            var deserializedEntity = SaveSerialization.DeserializeEntityAsNew(buffer, world);
+            var deserializedEntity = SaveSerializerAPI.DeserializeEntityAsNew(buffer, world);
             ref var test2 = ref deserializedEntity.Get<Test2>();
             Assert.That(test2.someDataArray1[0], Is.EqualTo(1));
             Assert.That(test2.someDataArray1[1], Is.EqualTo(2));
@@ -82,9 +82,9 @@ namespace UFlow.Addon.SaveState.Tests {
                 someData2 = 2,
                 someData3 = 3
             });
-            SaveSerialization.SerializeWorld(buffer, world);
+            SaveSerializerAPI.SerializeWorld(buffer, world);
             buffer.ResetCursor();
-            SaveSerialization.DeserializeWorld(buffer, world);
+            SaveSerializerAPI.DeserializeWorld(buffer, world);
             Assert.That(world.Get<Test1>().someData1, Is.EqualTo(1));
             Assert.That(world.Get<Test1>().someData2, Is.EqualTo(0));
             Assert.That(world.Get<Test1>().someData3, Is.EqualTo(3));
