@@ -95,7 +95,7 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
             world.ResetForDeserialization(buffer.ReadInt());
             var componentCount = buffer.ReadInt();
             for (var i = 0; i < componentCount; i++) {   
-                var componentType = SaveTypeMap.GetType(buffer.ReadInt());
+                var componentType = SaveTypeMap.GetType(buffer.ReadULong());
                 s_worldComponentDeserializeCache[componentType].Invoke(null, s_doubleObjectBuffer);
             }
             var entityCount = buffer.ReadInt();
@@ -183,7 +183,7 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
             var componentCount = (int)buffer.ReadByte();
             s_componentTypeBuffer.Clear();
             for (var i = 0; i < componentCount; i++) {
-                var componentType = SaveTypeMap.GetType(buffer.ReadInt());
+                var componentType = SaveTypeMap.GetType(buffer.ReadULong());
                 if (isInstantiatedSceneEntity)
                     s_componentTypeBuffer.Add(componentType);
                 else
