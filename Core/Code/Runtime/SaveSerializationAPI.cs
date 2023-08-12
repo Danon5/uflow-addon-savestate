@@ -8,12 +8,10 @@ using UFlow.Core.Runtime;
 
 namespace UFlow.Addon.SaveState.Core.Runtime {
     public static class SaveSerializationAPI {
-        private static readonly Dictionary<Type, MethodInfo> s_entityComponentSerializeCache = new();
-        private static readonly Dictionary<Type, MethodInfo> s_entityComponentDeserializeCache = new();
-        private static readonly Dictionary<Type, MethodInfo> s_worldComponentSerializeCache = new();
-        private static readonly Dictionary<Type, MethodInfo> s_worldComponentDeserializeCache = new();
-        private static readonly object[] s_singleObjectBuffer = new object[1];
-        private static readonly object[] s_doubleObjectBuffer = new object[2];
+        private static readonly Dictionary<Type, SerializeEntityComponentDelegate> s_entityComponentSerializeCache = new();
+        private static readonly Dictionary<Type, DeserializeEntityComponentDelegate> s_entityComponentDeserializeCache = new();
+        private static readonly Dictionary<Type, SerializeWorldComponentDelegate> s_worldComponentSerializeCache = new();
+        private static readonly Dictionary<Type, DeserializeWorldComponentDelegate> s_worldComponentDeserializeCache = new();
         private static readonly HashSet<Type> s_componentTypeBuffer = new();
         private static readonly Queue<Type> s_componentRemoveQueue = new();
         private static Entity s_currentEntity;
@@ -21,21 +19,25 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
         static SaveSerializationAPI() {
             var type = typeof(SaveSerializationAPI);
             foreach (var registeredType in SaveTypeMap.GetRegisteredTypesEnumerable())
-                s_entityComponentSerializeCache.Add(registeredType, 
-                    type.GetMethod(nameof(SerializeEntityComponent), BindingFlags.Static | BindingFlags.NonPublic)!
-                        .MakeGenericMethod(registeredType));
+                s_entityComponentSerializeCache.Add(registeredType,
+                    UFlowUtils.Reflection.CreateDelegateForMethod<SerializeEntityComponentDelegate>(
+                        type.GetMethod(nameof(SerializeEntityComponent), BindingFlags.Static | BindingFlags.NonPublic)!
+                            .MakeGenericMethod(registeredType)));
             foreach (var registeredType in SaveTypeMap.GetRegisteredTypesEnumerable())
-                s_entityComponentDeserializeCache.Add(registeredType, 
+                s_entityComponentDeserializeCache.Add(registeredType,
+                    UFlowUtils.Reflection.CreateDelegateForMethod<DeserializeEntityComponentDelegate>(
                     type.GetMethod(nameof(DeserializeEntityComponent), BindingFlags.Static | BindingFlags.NonPublic)!
-                        .MakeGenericMethod(registeredType));
+                        .MakeGenericMethod(registeredType)));
             foreach (var registeredType in SaveTypeMap.GetRegisteredTypesEnumerable())
                 s_worldComponentSerializeCache.Add(registeredType, 
+                    UFlowUtils.Reflection.CreateDelegateForMethod<SerializeWorldComponentDelegate>(
                     type.GetMethod(nameof(SerializeWorldComponent), BindingFlags.Static | BindingFlags.NonPublic)!
-                        .MakeGenericMethod(registeredType));
+                        .MakeGenericMethod(registeredType)));
             foreach (var registeredType in SaveTypeMap.GetRegisteredTypesEnumerable())
                 s_worldComponentDeserializeCache.Add(registeredType, 
+                    UFlowUtils.Reflection.CreateDelegateForMethod<DeserializeWorldComponentDelegate>(
                     type.GetMethod(nameof(DeserializeWorldComponent), BindingFlags.Static | BindingFlags.NonPublic)!
-                        .MakeGenericMethod(registeredType));
+                        .MakeGenericMethod(registeredType)));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -46,14 +48,14 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DeserializeComponent<T>(in ByteBuffer buffer, ref T component) where T : IEcsComponent {
-            buffer.ReadInt();
+            buffer.ReadULong();
             ComponentSerialization<SaveAttribute, T>.Deserialize(buffer, ref component);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T DeserializeComponent<T>(in ByteBuffer buffer) where T : IEcsComponent, new() {
             var component = new T();
-            buffer.ReadInt();
+            buffer.ReadULong();
             ComponentSerialization<SaveAttribute, T>.Deserialize(buffer, ref component);
             return component;
         }
@@ -74,13 +76,11 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SerializeWorld(in ByteBuffer buffer, in World world) {
-            s_doubleObjectBuffer[0] = buffer;
-            s_doubleObjectBuffer[1] = world;
             buffer.Write(world.NextEntityId);
             buffer.Write(world.ComponentCount);
             foreach (var componentType in world.ComponentTypes) {
                 buffer.Write(SaveTypeMap.GetHash(componentType));
-                s_worldComponentSerializeCache[componentType].Invoke(null, s_doubleObjectBuffer);
+                s_worldComponentSerializeCache[componentType].Invoke(buffer, world);
             }
             buffer.Write(world.EntityCount);
             foreach (var entity in world.GetEntitiesEnumerable())
@@ -89,14 +89,12 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void DeserializeWorld(in ByteBuffer buffer, in World world) {
-            s_doubleObjectBuffer[0] = buffer;
-            s_doubleObjectBuffer[1] = world;
             world.IsDeserializing = true;
             world.ResetForDeserialization(buffer.ReadInt());
             var componentCount = buffer.ReadInt();
             for (var i = 0; i < componentCount; i++) {   
                 var componentType = SaveTypeMap.GetType(buffer.ReadULong());
-                s_worldComponentDeserializeCache[componentType].Invoke(null, s_doubleObjectBuffer);
+                s_worldComponentDeserializeCache[componentType].Invoke(buffer, world);
             }
             var entityCount = buffer.ReadInt();
             for (var i = 0; i < entityCount; i++)
@@ -133,7 +131,6 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void SerializeEntityInternal(in ByteBuffer buffer, in Entity entity, bool asNew) {
             EntityPrefabMap.EnsureInitialized();
-            s_singleObjectBuffer[0] = buffer;
             s_currentEntity = entity;
             var isInstantiatedSceneEntity = entity.Has<InstantiatedSceneEntity>();
             buffer.Write(isInstantiatedSceneEntity);
@@ -153,7 +150,7 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
             foreach (var componentType in entity.ComponentTypes) {
                 if (componentType == instantiatedSceneEntityType) continue;
                 buffer.Write(SaveTypeMap.GetHash(componentType));
-                s_entityComponentSerializeCache[componentType].Invoke(null, s_singleObjectBuffer);
+                s_entityComponentSerializeCache[componentType].Invoke(buffer);
             }
             buffer.Write(entity.IsEnabled());
         }
@@ -161,7 +158,6 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Entity DeserializeEntityInternal(in ByteBuffer buffer, in World world, bool asNew) {
             EntityPrefabMap.EnsureInitialized();
-            s_singleObjectBuffer[0] = buffer;
             var isInstantiatedSceneEntity = buffer.ReadBool();
             if (asNew) {
                 if (isInstantiatedSceneEntity) {
@@ -187,7 +183,7 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
                 if (isInstantiatedSceneEntity)
                     s_componentTypeBuffer.Add(componentType);
                 else
-                    s_entityComponentDeserializeCache[componentType].Invoke(null, s_singleObjectBuffer);
+                    s_entityComponentDeserializeCache[componentType].Invoke(buffer);
             }
             if (isInstantiatedSceneEntity) {
                 var instantiatedSceneEntityType = typeof(InstantiatedSceneEntity);
@@ -199,10 +195,18 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
                 while (s_componentRemoveQueue.TryDequeue(out var componentType))
                     s_currentEntity.RemoveRaw(componentType);
                 foreach (var componentType in s_componentTypeBuffer)
-                    s_entityComponentDeserializeCache[componentType].Invoke(null, s_singleObjectBuffer);
+                    s_entityComponentDeserializeCache[componentType].Invoke(buffer);
             }
             s_currentEntity.SetEnabled(buffer.ReadBool());
             return s_currentEntity;
         }
+
+        private delegate void SerializeEntityComponentDelegate(in ByteBuffer buffer);
+
+        private delegate void DeserializeEntityComponentDelegate(in ByteBuffer buffer);
+
+        private delegate void SerializeWorldComponentDelegate(in ByteBuffer buffer, in World world);
+
+        private delegate void DeserializeWorldComponentDelegate(in ByteBuffer buffer, in World world);
     }
 }
