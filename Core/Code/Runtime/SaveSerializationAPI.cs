@@ -70,9 +70,7 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
         public static void SerializeEntityAsNew(in ByteBuffer buffer, in Entity entity) => SerializeEntityInternal(buffer, entity, true);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Entity DeserializeEntityAsNew(in ByteBuffer buffer, in World world) {
-            return DeserializeEntityInternal(buffer, world, true);
-        }
+        public static Entity DeserializeEntityAsNew(in ByteBuffer buffer, in World world) => DeserializeEntityInternal(buffer, world, true);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SerializeWorld(in ByteBuffer buffer, in World world) {
