@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Addon.Serialization.Core.Runtime;
@@ -12,8 +11,8 @@ namespace UFlow.Addon.SaveState.Core.Runtime {
         private static readonly Dictionary<ulong, Type> s_hashToType = new();
 
         static SaveTypeMap() {
-            foreach (var type in UFlowUtils.Reflection.GetAllInheritorsWithAttribute<IEcsComponent, EcsSerializableAttribute>()) {
-                var hash = SerializationAPI.CalculateHash(type.GetCustomAttribute<EcsSerializableAttribute>().persistentKey);
+            foreach (var (type, att) in UFlowUtils.Reflection.GetAllInheritorsWithAttribute<IEcsComponent, EcsSerializableAttribute>()) {
+                var hash = SerializationAPI.CalculateHash(att.persistentKey);
                 s_typeToHash[type] = hash;
                 s_hashToType[hash] = type;
             }
